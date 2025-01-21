@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BankAccountApp.Exceptions;
+using System;
 
 namespace BankAccountApp
 {
@@ -12,6 +13,26 @@ namespace BankAccountApp
 
         public BankAccount(string accountNumber, double initialBalance, string accountHolderName, string accountType, DateTime dateOpened)
         {
+            if (string.IsNullOrWhiteSpace(accountNumber))
+            {
+                throw new ArgumentException("Account number cannot be null or empty.", nameof(accountNumber));
+            }
+
+            if (initialBalance < 0)
+            {
+                throw new ArgumentException("Initial balance cannot be negative.", nameof(initialBalance));
+            }
+
+            if (string.IsNullOrWhiteSpace(accountHolderName))
+            {
+                throw new ArgumentException("Account holder name cannot be null or empty.", nameof(accountHolderName));
+            }
+
+            if (string.IsNullOrWhiteSpace(accountType))
+            {
+                throw new ArgumentException("Account type cannot be null or empty.", nameof(accountType));
+            }
+
             AccountNumber = accountNumber;
             Balance = initialBalance;
             AccountHolderName = accountHolderName;
@@ -21,11 +42,20 @@ namespace BankAccountApp
 
         public void Credit(double amount)
         {
+            if (amount <= 0)
+            {
+                throw new InvalidAmountException();
+            }
+
             Balance += amount;
         }
 
         public void Debit(double amount)
         {
+            if (amount <= 0)
+            {
+                throw new InvalidAmountException();
+            }
 
             if (Balance >= amount)
             {
@@ -33,7 +63,7 @@ namespace BankAccountApp
             }
             else
             {
-                throw new Exception("Insufficient balance for debit.");
+                throw new InsufficientBalanceException();
             }
         }
 
@@ -44,11 +74,26 @@ namespace BankAccountApp
 
         public void Transfer(BankAccount toAccount, double amount)
         {
+            if (toAccount == null)
+            {
+                throw new ArgumentNullException(nameof(toAccount));
+            }
+
+            if (amount <= 0)
+            {
+                throw new InvalidAmountException();
+            }
+
+            if (this == toAccount)
+            {
+                throw new ArgumentException("Cannot transfer to the same account.", nameof(toAccount));
+            }
+
             if (Balance >= amount)
             {
-                if (AccountHolderName != toAccount.AccountHolderName && amount > 500)
+                if (amount > 500)
                 {
-                    throw new Exception("Transfer amount exceeds maximum limit for different account owners.");
+                    throw new TransferLimitExceededException();
                 }
 
                 Debit(amount);
@@ -56,7 +101,7 @@ namespace BankAccountApp
             }
             else
             {
-                throw new Exception("Insufficient balance for transfer.");
+                throw new InsufficientBalanceException();
             }
         }
 
@@ -68,6 +113,11 @@ namespace BankAccountApp
 
         public double CalculateInterest(double interestRate)
         {
+            if (interestRate < 0)
+            {
+                throw new InvalidAmountException();
+            }
+            
             return Balance * interestRate;
         }
     }

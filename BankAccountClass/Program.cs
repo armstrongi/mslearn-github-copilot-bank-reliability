@@ -1,4 +1,9 @@
-﻿namespace BankAccountApp
+﻿using BankAccountApp.Exceptions;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace BankAccountApp
 {
     class Program
     {
@@ -11,96 +16,138 @@
         private const double minAccountStart = 200.0;
         private const double maxAccountStart = 1000.0;
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            List<BankAccount> accounts = CreateBankAccounts(NumberOfAccounts);
-            SimulateTransactions(accounts, NumberOfTransactions, minTransactionAmount, maxTransactionAmount);
-            SimulateTransfers(accounts, NumberOfTransactions, minTransactionAmount, maxTransactionAmount);
+            List<BankAccount> accounts = await CreateBankAccountsAsync(NumberOfAccounts);
+            await SimulateTransactionsAsync(accounts, NumberOfTransactions, minTransactionAmount, maxTransactionAmount);
+            await SimulateTransfersAsync(accounts, NumberOfTransactions, minTransactionAmount, maxTransactionAmount);
         }
 
-        static List<BankAccount> CreateBankAccounts(int numberOfAccounts)
+        static async Task<List<BankAccount>> CreateBankAccountsAsync(int numberOfAccounts)
         {
             List<BankAccount> accounts = new List<BankAccount>();
-            int createdAccounts = 0;
-            while (createdAccounts < numberOfAccounts)
+            List<Task> tasks = new List<Task>();
+            
+            for (int i = 0; i < numberOfAccounts; i++)
             {
-                try
+                tasks.Add(Task.Run(() =>
                 {
-                    double initialBalance = GenerateRandomDollarAmount(true, minAccountStart, maxAccountStart);
-                    string accountHolderName = GenerateRandomAccountHolder();
-                    string accountType = GenerateRandomAccountType();
-                    DateTime dateOpened = GenerateRandomDateOpened();
-                    BankAccount account = new BankAccount($"Account {createdAccounts + 1}", initialBalance, accountHolderName, accountType, dateOpened);
-                    accounts.Add(account);
-                    createdAccounts++;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Account creation failed: {ex.Message}");
-                }
+                    try
+                    {
+                        double initialBalance = GenerateRandomDollarAmount(true, minAccountStart, maxAccountStart);
+                        string accountHolderName = GenerateRandomAccountHolder();
+                        string accountType = GenerateRandomAccountType();
+                        DateTime dateOpened = GenerateRandomDateOpened();
+                        BankAccount account = new BankAccount($"Account {i + 1}", initialBalance, accountHolderName, accountType, dateOpened);
+                        lock (accounts)
+                        {
+                            accounts.Add(account);
+                        }
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        Console.WriteLine($"Account creation failed due to invalid argument: {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Account creation failed: {ex.Message}");
+                    }
+                }));
             }
+
+            await Task.WhenAll(tasks);
             return accounts;
         }
 
-        static void SimulateTransactions(List<BankAccount> accounts, int numberOfTransactions, double minTransactionAmount, double maxTransactionAmount)
+        static async Task SimulateTransactionsAsync(List<BankAccount> accounts, int numberOfTransactions, double minTransactionAmount, double maxTransactionAmount)
         {
+            List<Task> tasks = new List<Task>();
+
             foreach (BankAccount account in accounts)
             {
-                for (int i = 0; i < numberOfTransactions; i++)
+                tasks.Add(Task.Run(() =>
                 {
-                    double transactionAmount = GenerateRandomDollarAmount(false, minTransactionAmount, maxTransactionAmount);
-                    try
+                    for (int i = 0; i < numberOfTransactions; i++)
                     {
-                        if (transactionAmount >= 0)
+                        double transactionAmount = GenerateRandomDollarAmount(false, minTransactionAmount, maxTransactionAmount);
+                        try
                         {
-                            account.Credit(transactionAmount);
-                            Console.WriteLine($"Credit: {transactionAmount}, Balance: {account.Balance.ToString("C")}, Account Holder: {account.AccountHolderName}, Account Type: {account.AccountType}");
+                            if (transactionAmount >= 0)
+                            {
+                                account.Credit(transactionAmount);
+                                Console.WriteLine($"Credit: {transactionAmount}, Balance: {account.Balance.ToString("C")}, Account Holder: {account.AccountHolderName}, Account Type: {account.AccountType}");
+                            }
+                            else
+                            {
+                                account.Debit(-transactionAmount);
+                                Console.WriteLine($"Debit: {transactionAmount}, Balance: {account.Balance.ToString("C")}, Account Holder: {account.AccountHolderName}, Account Type: {account.AccountType}");
+                            }
+                        }                        
+                        catch (InvalidAmountException ex)
+                        {
+                            Console.WriteLine($"Transaction failed due to an invalid amount: {ex.Message}");
                         }
-                        else
+                        catch (InsufficientBalanceException ex)
                         {
-                            account.Debit(-transactionAmount);
-                            Console.WriteLine($"Debit: {transactionAmount}, Balance: {account.Balance.ToString("C")}, Account Holder: {account.AccountHolderName}, Account Type: {account.AccountType}");
+                            Console.WriteLine($"Transaction failed due to insufficient balance: {ex.Message}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Transaction failed: {ex.Message}");
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Transaction failed: {ex.Message}");
-                    }
-                }
 
-                Console.WriteLine($"Account: {account.AccountNumber}, Balance: {account.Balance.ToString("C")}, Account Holder: {account.AccountHolderName}, Account Type: {account.AccountType}");
+                    Console.WriteLine($"Account: {account.AccountNumber}, Balance: {account.Balance.ToString("C")}, Account Holder: {account.AccountHolderName}, Account Type: {account.AccountType}");
+                }));
             }
+
+            await Task.WhenAll(tasks);
         }
 
-        static void SimulateTransfers(List<BankAccount> accounts, int numberOfTransactions, double minTransactionAmount, double maxTransactionAmount)
+        static async Task SimulateTransfersAsync(List<BankAccount> accounts, int numberOfTransactions, double minTransactionAmount, double maxTransactionAmount)
         {
-            foreach (BankAccount account in accounts)
-            {
-                for (int i = 0; i < numberOfTransactions; i++)
-                {
-                    double transactionAmount = GenerateRandomDollarAmount(false, minTransactionAmount, maxTransactionAmount);
-                    try
-                    {
-                        if (transactionAmount >= 0)
-                        {
-                            account.Credit(transactionAmount);
-                            Console.WriteLine($"Credit: {transactionAmount}, Balance: {account.Balance.ToString("C")}, Account Holder: {account.AccountHolderName}, Account Type: {account.AccountType}");
-                        }
-                        else
-                        {
-                            account.Debit(-transactionAmount);
-                            Console.WriteLine($"Debit: {transactionAmount}, Balance: {account.Balance.ToString("C")}, Account Holder: {account.AccountHolderName}, Account Type: {account.AccountType}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Transaction failed: {ex.Message}");
-                    }
-                }
+            List<Task> tasks = new List<Task>();
 
-                Console.WriteLine($"Account: {account.AccountNumber}, Balance: {account.Balance.ToString("C")}, Account Holder: {account.AccountHolderName}, Account Type: {account.AccountType}");
+            foreach (BankAccount fromAccount in accounts)
+            {
+                tasks.Add(Task.Run(() =>
+                {
+                    for (int i = 0; i < numberOfTransactions; i++)
+                    {
+                        double transferAmount = GenerateRandomDollarAmount(false, minTransactionAmount, maxTransactionAmount);
+                        try
+                        {
+                            BankAccount toAccount = accounts[random.Next(0, accounts.Count)];
+                            fromAccount.Transfer(toAccount, transferAmount);
+                            Console.WriteLine($"Transfer: {transferAmount.ToString("C")} from {fromAccount.AccountNumber} ({fromAccount.AccountHolderName}, {fromAccount.AccountType}) to {toAccount.AccountNumber} ({toAccount.AccountHolderName}, {toAccount.AccountType})");
+                        }
+                        catch (ArgumentException ex)
+                        {
+                            Console.WriteLine($"Transfer failed due to invalid argument: {ex.Message}");
+                        }
+                        catch (InvalidAmountException ex)
+                        {
+                            Console.WriteLine($"Transfer failed due to an invalid amount: {ex.Message}");
+                        }
+                        catch (TransferLimitExceededException ex)
+                        {
+                            Console.WriteLine($"Transfer failed due to the transfer limit being exceeded: {ex.Message}");
+                        }
+                        catch (InsufficientBalanceException ex)
+                        {
+                            Console.WriteLine($"Transfer failed due to insufficient balance: {ex.Message}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Transaction failed: {ex.Message}");
+                        }
+                    }
+
+                    Console.WriteLine($"Account: {fromAccount.AccountNumber}, Balance: {fromAccount.Balance.ToString("C")}, Account Holder: {fromAccount.AccountHolderName}, Account Type: {fromAccount.AccountType}");
+                }));
             }
 
+            await Task.WhenAll(tasks);
         }
 
         static double GenerateRandomDollarAmount(bool isAccount, double min, double max)

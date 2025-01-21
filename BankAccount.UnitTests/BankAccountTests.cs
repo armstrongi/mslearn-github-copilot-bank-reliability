@@ -17,15 +17,14 @@ namespace BankAccountUnitTests
         public void Credit_WithNegativeAmount_ShouldThrowException()
         {
             var account = new BankAccount("12345", 100, "John Doe", "Savings", DateTime.Now);
-            Assert.Throws<ArgumentException>(() => account.Credit(-50));
+            Assert.Throws<BankAccountApp.Exceptions.InvalidAmountException>(() => account.Credit(-50));
         }
 
         [Fact]
         public void Credit_WithZeroAmount_ShouldNotChangeBalance()
         {
             var account = new BankAccount("12345", 100, "John Doe", "Savings", DateTime.Now);
-            account.Credit(0);
-            Assert.Equal(100, account.GetBalance());
+            Assert.Throws<BankAccountApp.Exceptions.InvalidAmountException>(() => account.Credit(0));            
         }
 
         [Fact]
@@ -40,22 +39,21 @@ namespace BankAccountUnitTests
         public void Debit_WithInsufficientBalance_ThrowsException()
         {
             var account = new BankAccount("12345", 100, "John Doe", "Savings", DateTime.Now);
-            Assert.Throws<Exception>(() => account.Debit(150));
+            Assert.Throws<BankAccountApp.Exceptions.InsufficientBalanceException>(() => account.Debit(150));
         }
 
         [Fact]
         public void Debit_WithNegativeAmount_ShouldThrowException()
         {
             var account = new BankAccount("12345", 100, "John Doe", "Savings", DateTime.Now);
-            Assert.Throws<ArgumentException>(() => account.Debit(-50));
+            Assert.Throws<BankAccountApp.Exceptions.InvalidAmountException>(() => account.Debit(-50));
         }
 
         [Fact]
         public void Debit_WithZeroAmount_ShouldNotChangeBalance()
         {
             var account = new BankAccount("12345", 100, "John Doe", "Savings", DateTime.Now);
-            account.Debit(0);
-            Assert.Equal(100, account.GetBalance());
+            Assert.Throws<BankAccountApp.Exceptions.InvalidAmountException>(() => account.Debit(0));            
         }
 
         [Fact]
@@ -73,7 +71,7 @@ namespace BankAccountUnitTests
         {
             var sourceAccount = new BankAccount("12345", 100, "John Doe", "Savings", DateTime.Now);
             var targetAccount = new BankAccount("67890", 100, "Jane Doe", "Savings", DateTime.Now);
-            Assert.Throws<Exception>(() => sourceAccount.Transfer(targetAccount, 150));
+            Assert.Throws<BankAccountApp.Exceptions.InsufficientBalanceException>(() => sourceAccount.Transfer(targetAccount, 150));
         }
 
         [Fact]
@@ -81,7 +79,7 @@ namespace BankAccountUnitTests
         {
             var sourceAccount = new BankAccount("12345", 100, "John Doe", "Savings", DateTime.Now);
             var targetAccount = new BankAccount("67890", 100, "Jane Doe", "Savings", DateTime.Now);
-            Assert.Throws<ArgumentException>(() => sourceAccount.Transfer(targetAccount, -50));
+            Assert.Throws<BankAccountApp.Exceptions.InvalidAmountException>(() => sourceAccount.Transfer(targetAccount, -50));
         }
 
         [Fact]
@@ -89,9 +87,7 @@ namespace BankAccountUnitTests
         {
             var sourceAccount = new BankAccount("12345", 100, "John Doe", "Savings", DateTime.Now);
             var targetAccount = new BankAccount("67890", 100, "Jane Doe", "Savings", DateTime.Now);
-            sourceAccount.Transfer(targetAccount, 0);
-            Assert.Equal(100, sourceAccount.GetBalance());
-            Assert.Equal(100, targetAccount.GetBalance());
+            Assert.Throws<BankAccountApp.Exceptions.InvalidAmountException>(() => sourceAccount.Transfer(targetAccount, 0));            
         }
 
         [Fact]
@@ -104,8 +100,8 @@ namespace BankAccountUnitTests
         [Fact]
         public void Transfer_ToNullAccount_ShouldThrowException()
         {
-            var account = new BankAccount("12345", 100, "John Doe", "Savings", DateTime.Now);
-            Assert.Throws<ArgumentNullException>(() => account.Transfer(null, 50));
+            var account = new BankAccount("12345", 100, "John Doe", "Savings", DateTime.Now);            
+            Assert.Throws<ArgumentNullException>(() => account.Transfer(null!, 50));
         }
 
         [Fact]
@@ -120,14 +116,14 @@ namespace BankAccountUnitTests
         public void CalculateInterest_WithNegativeRate_ShouldThrowException()
         {
             var account = new BankAccount("12345", 100, "John Doe", "Savings", DateTime.Now);
-            Assert.Throws<ArgumentException>(() => account.CalculateInterest(-0.05));
+            Assert.Throws<BankAccountApp.Exceptions.InvalidAmountException>(() => account.CalculateInterest(-0.05));
         }
 
         [Fact]
         public void CalculateInterest_WithZeroRate_ShouldReturnZero()
         {
             var account = new BankAccount("12345", 100, "John Doe", "Savings", DateTime.Now);
-            var interest = account.CalculateInterest(0);
+            var interest = account.CalculateInterest(0);            
             Assert.Equal(0, interest);
         }
     }
